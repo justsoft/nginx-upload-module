@@ -60,6 +60,25 @@ Specifies location to pass request body to. File fields will be stripped
 and replaced by fields, containing necessary information to handle
 uploaded files.
 
+To save the uploaded files to the specified folder with no backend involved
+can give a colon followed by the destination path as the location.  A JSON
+encoded form fields will be responded for success upload.
+
+Usage example:
+
+```nginx
+upload_pass :/var/nginx/upload;
+```
+
+### upload_accept_path
+
+**Syntax:** <code><b>upload_accept_path</b> on | off</code><br>
+**Default:** `upload_accept_path off`<br>
+**Context:** `main,server,location`
+
+Enables specifying path along with file name by the 'filename' parameter of
+the "content-disposition" header.
+
 ### upload_resumable
 
 **Syntax:** <code><b>upload_resumable</b> on | off</code><br>
@@ -315,6 +334,31 @@ In this example backend gets request URI "/upload?id=5". In case of
 server {
     client_max_body_size 100m;
     listen 80;
+
+    # Upload to the specified folder directly
+    location /up/ {
+        # Save uploaded files to /var/nginx/up/ directly
+        upload_pass :/var/nginx/up;
+
+        # Store files to this directory
+        # The directory is hashed, subdirectories 0 1 2 3 4 5 6 7 8 9 should exist
+        upload_store /var/nginx/tmp 1;
+
+        # Allow uploaded files to be read only by user
+        upload_store_access user:r;
+
+        # Enable path for upload filename
+        upload_accept_path on;
+
+        # Set specified fields in request body
+        upload_set_form_field $upload_field_name.name "$upload_file_name";
+
+        # Inform backend about hash and size of a file
+        upload_aggregate_form_field "$upload_field_name.md5" "$upload_file_md5";
+        upload_aggregate_form_field "$upload_field_name.size" "$upload_file_size";
+
+        upload_cleanup 400 404 499 500-505;
+    }
 
     # Upload form should be submitted to this location
     location /upload/ {
