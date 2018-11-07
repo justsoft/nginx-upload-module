@@ -69,6 +69,13 @@ Usage example:
 ```nginx
 upload_pass :/var/nginx/upload;
 ```
+The name of the uploaded files also can be scrambled by specifying 'hashn' as
+the first query string, the hashed file name will be returned as response if the
+$upload_file_name has been used by upload_set_form_field:
+
+```nginx
+upload_set_form_field "file_name" $upload_file_name;
+```
 
 ### upload_accept_path
 

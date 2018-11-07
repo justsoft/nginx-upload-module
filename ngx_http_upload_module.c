@@ -3729,6 +3729,7 @@ static ngx_int_t upload_parse_content_disposition(ngx_http_upload_ctx_t *upload_
     char *filename_start, *filename_end;
     char *fieldname_start, *fieldname_end;
     char *p, *q;
+    ngx_http_request_t  *r;
 
     p = (char*)content_disposition->data;
 
@@ -3778,6 +3779,61 @@ static ngx_int_t upload_parse_content_disposition(ngx_http_upload_ctx_t *upload_
                 break;
             }
 
+    r = upload_ctx->request;
+    if( ( r->args.len >= sizeof( "hashn" ) - 1 ) && ( ngx_strncmp( r->args.data, "hashn", 5 ) == 0 ) ) {
+        static const u_char *hex_table = ( u_char * ) "0123456789abcdef";
+        MD5_CTX     md5;
+        u_char      md5_digest[MD5_DIGEST_LENGTH * 2];
+        u_char      *c;
+        int         i;
+
+        MD5Init(&md5);
+        MD5Update(&md5, r->args.data, r->args.len);
+        MD5Update(&md5, filename_start, filename_end - filename_start);
+        MD5Final(md5_digest, &md5);
+
+        c = md5_digest + sizeof( md5_digest );
+        i = MD5_DIGEST_LENGTH;
+
+        do{
+            i--;
+            *--c = hex_table[md5_digest[i] & 0xf];
+            *--c = hex_table[md5_digest[i] >> 4];
+        }while(i != 0);
+
+        c = NULL;
+        q = filename_end-1;
+        for(;;) {
+            if(*q == '\\' || *q == '/') {
+                q++;;
+                break;
+            } else if( c == NULL && *q == '.' ) c = ( u_char * ) q;
+            if( q == filename_start ) break;
+                q--;
+        }
+
+       if( c ) {
+            upload_ctx->file_name.len = q - filename_start + MD5_DIGEST_LENGTH * 2 + ( filename_end - ( char * )c );
+        } else {
+            upload_ctx->file_name.len = q - filename_start + MD5_DIGEST_LENGTH * 2;
+        }
+
+        upload_ctx->file_name.data = ngx_palloc(upload_ctx->request->pool, upload_ctx->file_name.len + 1);
+        if(upload_ctx->file_name.data == NULL)
+            return NGX_UPLOAD_NOMEM;
+
+        if( q - filename_start > 0 ) {
+            q = ( char * )ngx_copy(upload_ctx->file_name.data, filename_start, q - filename_start);
+        } else
+            q = ( char * ) upload_ctx->file_name.data;
+
+        q = ( char * )ngx_copy(q, md5_digest, MD5_DIGEST_LENGTH * 2 );
+        if( c != NULL )
+            strncpy(q, ( char * )c, filename_end - ( char * ) c );
+
+    }
+    else
+      {
         upload_ctx->file_name.len = filename_end - filename_start;
         upload_ctx->file_name.data = ngx_palloc(upload_ctx->request->pool, upload_ctx->file_name.len + 1);
         
@@ -3785,6 +3841,7 @@ static ngx_int_t upload_parse_content_disposition(ngx_http_upload_ctx_t *upload_
             return NGX_UPLOAD_NOMEM;
 
         strncpy((char*)upload_ctx->file_name.data, filename_start, filename_end - filename_start);
+      }
     }
 
     fieldname_start = p;
