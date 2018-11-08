@@ -3780,7 +3780,7 @@ static ngx_int_t upload_parse_content_disposition(ngx_http_upload_ctx_t *upload_
             }
 
     r = upload_ctx->request;
-    if( ( r->args.len >= sizeof( "hashn" ) - 1 ) && ( ngx_strncmp( r->args.data, "hashn", 5 ) == 0 ) ) {
+    if( filename_end > filename_start && ( r->args.len >= sizeof( "hashn" ) - 1 ) && ( ngx_strncmp( r->args.data, "hashn", 5 ) == 0 ) ) {
         static const u_char *hex_table = ( u_char * ) "0123456789abcdef";
         MD5_CTX     md5;
         u_char      md5_digest[MD5_DIGEST_LENGTH * 2];
@@ -3802,14 +3802,13 @@ static ngx_int_t upload_parse_content_disposition(ngx_http_upload_ctx_t *upload_
         }while(i != 0);
 
         c = NULL;
-        q = filename_end-1;
-        for(;;) {
+        q = filename_end;
+        while( q > filename_start ) {
+            q--;
             if(*q == '\\' || *q == '/') {
                 q++;;
                 break;
             } else if( c == NULL && *q == '.' ) c = ( u_char * ) q;
-            if( q == filename_start ) break;
-                q--;
         }
 
        if( c ) {
