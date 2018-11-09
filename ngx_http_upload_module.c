@@ -1169,6 +1169,7 @@ ngx_http_upload_eval_state_path(ngx_http_request_t *r) {
     ulcf = ngx_http_get_module_loc_conf(r, ngx_http_upload_module);
     u = ngx_http_get_module_ctx(r, ngx_http_upload_module);
 
+  if(ulcf->state_store_path) {
     if(ulcf->state_store_path->is_dynamic) {
         u->state_store_path = ngx_pcalloc(r->pool, sizeof(ngx_path_t));
         if(u->store_path == NULL) {
@@ -1187,6 +1188,7 @@ ngx_http_upload_eval_state_path(ngx_http_request_t *r) {
     else{
         u->state_store_path = ulcf->state_store_path->path;
     }
+  }
 
     return NGX_OK;
 } /* }}} */
