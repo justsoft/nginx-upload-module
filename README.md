@@ -367,6 +367,30 @@ server {
         upload_cleanup 400 404 499 500-505;
     }
 
+    location ~ ^/ups/(.*) {
+        # Upload files to specified sub-folder directly 
+        upload_pass :/var/nginx/ups/$1;
+
+        # Store files to this directory
+        # The directory is hashed, subdirectories 0 1 2 3 4 5 6 7 8 9 should exist
+        upload_store /var/nginx/tmp 1;
+
+        # Allow uploaded files to be read only by user
+        upload_store_access user:r;
+
+        # Enable path for upload filename
+        upload_accept_path off;
+
+        # Set specified fields in request body
+        upload_set_form_field $upload_field_name.name "$upload_file_name";
+
+        # Inform backend about hash and size of a file
+        upload_aggregate_form_field "$upload_field_name.md5" "$upload_file_md5";
+        upload_aggregate_form_field "$upload_field_name.size" "$upload_file_size";
+
+        upload_cleanup 400 404 499 500-505;
+    }
+
     # Upload form should be submitted to this location
     location /upload/ {
         # Pass altered request body to this location
