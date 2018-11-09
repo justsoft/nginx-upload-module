@@ -183,6 +183,7 @@ typedef struct {
     ngx_flag_t                    resumable_uploads;
     ngx_flag_t                    empty_field_names;
     size_t                        limit_rate;
+    ngx_str_t                     allowed_exts;
 
     unsigned int                  md5:1;
     unsigned int                  sha1:1;
@@ -633,6 +634,16 @@ static ngx_command_t  ngx_http_upload_commands[] = { /* {{{ */
        offsetof(ngx_http_upload_loc_conf_t, accept_path),
        NULL },
 
+     /*
+      * Specifies the allowed extensions, all extensions are concatenated without spaces.
+      */
+     { ngx_string("upload_allowed_exts"),
+       NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_HTTP_LMT_CONF|NGX_HTTP_LIF_CONF
+                         |NGX_CONF_TAKE1,
+       ngx_conf_set_str_slot,
+       NGX_HTTP_LOC_CONF_OFFSET,
+       offsetof(ngx_http_upload_loc_conf_t, allowed_exts),
+       NULL },
      /*
       * Specifies request body reception rate limit
       */
@@ -2442,6 +2453,7 @@ ngx_http_upload_create_loc_conf(ngx_conf_t *cf)
      * conf->header_templates,
      * conf->field_templates,
      * conf->aggregate_field_templates,
+     * conf->allowed_exts,
      * and conf->field_filters are
      * zeroed by ngx_pcalloc
      */
@@ -2525,6 +2537,9 @@ ngx_http_upload_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
         conf->empty_field_names = (prev->empty_field_names != NGX_CONF_UNSET) ?
             prev->empty_field_names : 0;
     }
+
+    ngx_conf_merge_str_value(conf->allowed_exts, prev->allowed_exts,
+                             ".jpg.mp4.m4a");
 
     if(conf->field_templates == NULL) {
         conf->field_templates = prev->field_templates;
@@ -3745,6 +3760,8 @@ static ngx_int_t upload_parse_content_disposition(ngx_http_upload_ctx_t *upload_
     filename_start = strstr(p, FILENAME_STRING);
 
     if(filename_start != 0) {
+        ngx_http_upload_loc_conf_t *ulcf = ngx_http_get_module_loc_conf(upload_ctx->request, ngx_http_upload_module);
+
         
         filename_start += sizeof(FILENAME_STRING)-1;
 
@@ -3843,6 +3860,18 @@ static ngx_int_t upload_parse_content_disposition(ngx_http_upload_ctx_t *upload_
 
         strncpy((char*)upload_ctx->file_name.data, filename_start, filename_end - filename_start);
       }
+
+     // check the file ext
+     if( ( ulcf->allowed_exts.len > 0 ) && ( upload_ctx->file_name.len > 0 ) ) {
+         size_t l = 0;
+         q = strrchr( ( char * ) upload_ctx->file_name.data, '.' );
+         if( q ) {
+             l = ( char * ) upload_ctx->file_name.data + upload_ctx->file_name.len - q;
+             q = ( char * ) ngx_strstr( ulcf->allowed_exts.data, q );
+         }
+         if( q == NULL || ( q[l] != '.' && q[l] != '\0' ) )
+             return NGX_DECLINED;
+     }
     }
 
     fieldname_start = p;

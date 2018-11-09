@@ -77,6 +77,18 @@ $upload_file_name has been used by upload_set_form_field:
 upload_set_form_field "file_name" $upload_file_name;
 ```
 
+### upload_allowed_exts
+
+**Syntax:** <code><b>upload_allowed_exts</b> exts</code><br>
+**Default:** `upload_allowed_exts .jpg.mp4.m4a`<br>
+**Context:** `main,server,location`
+
+Arbitrary date being uploaded and stored in server, especially executable
+binaries are very risky. This directive defines only specified file type ( file
+extensions ) which can be allowed to upload to server.  All extensions are
+concatenated as a string, no spaces between each other.
+
+
 ### upload_accept_path
 
 **Syntax:** <code><b>upload_accept_path</b> on | off</code><br>
