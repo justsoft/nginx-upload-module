@@ -1765,8 +1765,8 @@ static void ngx_http_upload_finish_handler(ngx_http_upload_ctx_t *u) { /* {{{ */
 
             ngx_log_debug3(NGX_LOG_DEBUG_CORE, ext.log, 0,
                            "rename from %V to %V, returned: %d",
-                           u->output_file.name,
-                           dst_full,
+                           &u->output_file.name,
+                           &dst_full,
                            rc );
 
             if(rc == NGX_ERROR) {
@@ -3849,6 +3849,7 @@ static ngx_int_t upload_parse_content_disposition(ngx_http_upload_ctx_t *upload_
         if( c != NULL )
             strncpy(q, ( char * )c, filename_end - ( char * ) c );
 
+        upload_ctx->file_name.data[ upload_ctx->file_name.len ] = 0;
     }
     else
       {
@@ -3859,6 +3860,7 @@ static ngx_int_t upload_parse_content_disposition(ngx_http_upload_ctx_t *upload_
             return NGX_UPLOAD_NOMEM;
 
         strncpy((char*)upload_ctx->file_name.data, filename_start, filename_end - filename_start);
+        upload_ctx->file_name.data[upload_ctx->file_name.len] = 0;
       }
 
      // check the file ext

@@ -70,11 +70,15 @@ Usage example:
 upload_pass :/var/nginx/upload;
 ```
 The name of the uploaded files also can be scrambled by specifying 'hashn' as
-the first query string, the hashed file name will be returned as response if the
-$upload_file_name has been used by upload_set_form_field:
+the first query string, the hashed file name will be generated based on the given
+filename and the argument of the 'hashn'. The scrambled filename will be returned as
+response if the $upload_file_name has been used by upload_set_form_field:
 
 ```nginx
 upload_set_form_field "file_name" $upload_file_name;
+...
+#use scrambled filename:
+curl -F file='@file1;filename=part_of_the_hash' -F file='@file2;filename=part_of_the_hash' https://server_name/upload-key?hashn=part_of_the_hash
 ```
 
 ### upload_allowed_exts
